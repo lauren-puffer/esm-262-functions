@@ -31,7 +31,7 @@ bertalanffy <- function(tl, w) {
   #mean biological condition factor used in Bertalanffy eqn. 
   
   t = ( - k ) * log( (109.22-tl) /109.22) 
-  #avg. fry length is 2.5 cm. max adult lenth is 109.22
+  #avg. fry length is 2.5 cm. max adult length is 109.22
   
   #write error codes for uneven lengths of values
   if (length(tl) != length(w)) {
