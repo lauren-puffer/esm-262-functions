@@ -1,0 +1,163 @@
+---
+title: "ESM 262 HW1 - Bertalanffy Function"
+author: "Lauren Puffer"
+format: html
+editor: visual
+embed-resources: true
+code-fold: show
+execute: 
+  warning: false
+  message: false
+toc: TRUE
+theme: journal
+---
+
+## Load packages
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(dplyr)
+```
+
+## Function description
+
+The Bertalanffy Age-Length equation is used in fisheries science to determine the age of a fish using length and weight data. This function will take the weight (g) and fork length (cm) of a Coho salmon and give you the approximate age of the fish in years. The function can be applied to a data set to examine the distribution of fish in the population by their age with a bar graph.
+
+## Create a help page with parameters
+
+```{r}
+#' Bertalanffy Age-Length Function for Coho Salmon
+#' 
+#' This is a function that calculates the age of a fish in years give the fork length in centimeters and the weight in grams
+#' 
+#' @param tl Fork length (cm)
+#' @param w Weight (g)
+#' @param 109.22 (cm) The maximum length of an adults Coho salmon. 
+#' @param k The mean biological condition coefficient which indicates the health of the fish population. 
+#' @return t (years)
+```
+
+## Bertalanffy function definition
+
+```{r}
+#create function where tl is total length (cm) and w is weight (g) in 
+
+bertalanffy <- function(tl, w) {
+  
+  # Error checks for negative values
+  ifelse((tl <0), return("Total length cannot be negative."), tl)
+  
+  ifelse((w<0), return("Weight cannot be negative."), w)
+  
+  #Check that both vectors are numeric
+  if (!is.numeric(tl) || !is.numeric(w)) {
+    return("Both total length (tl) and weight (w) must be numeric.")
+  }
+  
+  
+  k = ( 100 )*(w / (tl ^ 3)) 
+  #mean biological condition factor used in Bertalanffy eqn. 
+  
+  t = ( - k ) * log( (109.22-tl) /109.22) 
+  #avg. fry length is 2.5 cm. max adult lenth is 109.22
+  
+    #write error codes for uneven lengths of values
+    if (length(tl) != length(w)) {
+    return("Number of length values is not equal to number of weight values.")
+  }
+  
+  return(t) #get the age of the fish
+}
+```
+
+## Test function and error codes
+
+```{r}
+#test with a hypothetical fish
+bertalanffy(30, 1000)
+
+#test with negative values
+bertalanffy(-30, 1000)
+
+bertalanffy(30, -1000)
+
+#create datasets to test length errors
+fish_length <- 1:5
+fish_weight <- 1:20
+
+#test length errors
+bertalanffy(fish_length, fish_weight)
+
+```
+
+Now that we've confirmed that the function is working and error codes are generated, we can apply the function to a data set and create an age column within the data frame with the outputs from our function.
+
+## Data citation
+
+**U.S. GLOBEC Northeast Pacific**
+
+Wertheimer, A., Cokelet, E., Farley, E., Moss, J. (2009) Salmon length, weight, sex, stomach data from F/V Great Pacific, R/V Miller Freeman multiple cruises in the Coastal Gulf of Alaska, NE Pacific from 2001-2004 (NEP project). Biological and Chemical Oceanography Data Management Office (BCO-DMO). (Version 1) Version Date 2009-04-16 \[if applicable, indicate subset used\]. doi:10.1575/1912/bco-dmo.3106.1
+
+## Import Coho salmon data set
+
+```{r}
+salmon_data <- read.csv(here("Functions HW", "data", "salmon_biodata.csv")) |>
+  clean_names()
+```
+
+## Data wrangling
+
+```{r}
+#select only weight and length data for "wet" and not frozen fish
+#filter for coho salmon
+coho_df <- salmon_data |>
+  filter(species_common_name == "Coho") |>
+  select(length_wet, weight_wet)|>
+  drop_na() |>
+      mutate(length_wet = as.numeric(length_wet),  #convert length_wet to numeric
+    weight_wet = as.numeric(weight_wet)) |>
+  mutate(length_wet = (length_wet/10)) #convert lengths from mm to cm
+
+#check for NA values coerced from 'mutate' function
+non_numeric_rows <- coho_df[!grepl("^\\d*\\.?\\d*$", coho_df$weight_wet), ]
+print(non_numeric_rows)
+
+#some rows still have NAs so we must remove them 
+coho_df <- coho_df |>
+  filter(!is.na(as.numeric(weight_wet)))
+
+#make sure both are numeric
+is.numeric(coho_df$weight_wet)
+
+is.numeric(coho_df$length_wet)
+```
+
+## Function with Coho salmon data set
+
+```{r}
+#specify vectors
+total_length = coho_df$length_wet
+weight = coho_df$weight_wet
+
+#use function on coho salmon data set
+results = bertalanffy(total_length, weight)
+
+#create age column w results from function
+coho_df$age = results
+```
+
+## Create bar graph with ages of Coho salmon
+
+```{r}
+
+coho_age_graph <- ggplot(coho_df, aes(x = age, y = length_wet)) +
+  geom_point() +
+  geom_smooth()+
+  theme_classic()
+
+print(coho_age_graph)
+```
+
+The age of Coho salmon and their length seem to have a linear relationship. This is what we would expect to see with the Bertalanffy equation.
